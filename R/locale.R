@@ -16,3 +16,16 @@ centroid <- function(lat, lon){
   cent <- sf::st_set_crs(sf::st_as_sf(dat, coords = c("lon", "lat")), 4326)
   return(sf::st_transform(cent, 32145))
 }
+
+
+#' Convert shapefile to sf object
+#'
+#' @param file path to .shp file. CRS must be ESPG:32145 (NAD83 / Vermont)
+#'
+#' @return sf object
+#' @export
+#'
+#' @examples
+shp2sf <- function(file){
+  sf::st_set_crs(sf::st_read(file), 32145)
+}
