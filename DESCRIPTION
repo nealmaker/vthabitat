@@ -17,4 +17,6 @@ Imports:
     dplyr,
     sf,
     magrittr,
-    geosphere
+    geosphere,
+    arcpullr,
+    terra

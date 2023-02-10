@@ -3,4 +3,8 @@
 export("%>%")
 export(aoi)
 export(centroid)
+export(get_clr)
+export(get_landcover)
+export(get_ndsm)
+export(shp2sf)
 importFrom(magrittr,"%>%")
