@@ -12,7 +12,7 @@
 #'   properties that would otherwise extend beyond aoi? TRUE or FALSE. Only used
 #'   if \code{property} is defined.
 #'
-#' @return returns sf polygon object with area of interest geometry. CRS is
+#' @return sf polygon object with area of interest geometry. CRS is
 #'   EPSG:32145 (NAD83 / Vermont)
 #' @export
 #'

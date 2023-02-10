@@ -2,4 +2,5 @@
 
 export("%>%")
 export(aoi)
+export(centroid)
 importFrom(magrittr,"%>%")

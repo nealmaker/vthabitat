@@ -1,0 +1,18 @@
+#' Create centroid from lat and lon
+#'
+#' Manually enter latitude and longitude to create an sf centroid object that
+#' can later be used to define an area of interest, for example.
+#'
+#' @param lat latitude in decimal degrees
+#' @param lon longitude in decimal degrees
+#'
+#' @return sf point object with centroid geometry. CRS is ESPG:32145 (NAD83 /
+#'   Vermont)
+#' @export
+#'
+#' @examples
+centroid <- function(lat, lon){
+  dat <- data.frame(lat = lat, lon = lon)
+  cent <- sf::st_set_crs(sf::st_as_sf(dat, coords = c("lon", "lat")), 4326)
+  return(sf::st_transform(cent, 32145))
+}
