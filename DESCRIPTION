@@ -20,3 +20,5 @@ Imports:
     geosphere,
     arcpullr,
     terra
+Depends: 
+    R (>= 2.10)
