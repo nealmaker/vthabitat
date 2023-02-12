@@ -13,7 +13,7 @@
 #' @examples
 land_summary <- function(landcover){
   x <- summary(as.factor(arcpullr::raster_colors(landcover)$color))
-  # remove NA values (outside of mask), which show up as roads
+  # remove NA values (masked cells), which show up as roads
   x[which(names(x) == "#000000")] <-
     x[which(names(x) == "#000000")] - (sum(is.na(landcover@data@values))/3)
   data.frame(

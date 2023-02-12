@@ -13,12 +13,12 @@ Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.1
-Imports: 
+Imports:
     dplyr,
     sf,
     magrittr,
     geosphere,
     arcpullr,
     terra
-Depends: 
+Depends:
     R (>= 2.10)
