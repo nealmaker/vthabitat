@@ -57,19 +57,37 @@ focal_fun <- function(x, ...){
 #' Polygons of young forest and shrubland
 #'
 #' @param canopy \code{SpatRaster} object showing canopy attributes for area of
-#'   interest, made with \code{make_canopy}
+#'   interest, made with \code{make_canopy}. Currently CRS must be in meters, or
+#'   areas will fail silently!
+#' @param size minimum size, in acres, a shrubby area must occupy for inclusion
+#' @param distance maximum distance, in feet, two shrub polygons can be from
+#'   one-another and still count as a single shrubby area
 #'
 #' @return
 #' @export
 #'
 #' @examples
-make_shrub <- function(canopy){
+make_shrub <- function(canopy, size = 1, distance = 100){
   canopy[canopy != 1] <- NA # 1 is shrubby
   out <- sf::st_as_sf(terra::as.polygons(canopy))
-  #multipolygons to single polygons
-  #back to multipolygons, with each one having only polygons w/in some distance
-  #from one another
-  #calculate acreage
-  #filter only multipolygons > 1ac
+  # need single polygons to eliminate small areas, then filter out tiny remnants
+  # before recombining by distance (GOOD IDEA? OR UNFAIRLY REMOVING GOOD BUT
+  # BROKEN HABITAT AREAS?)
+  out <- sf::st_cast(out, to = "POLYGON")
+  out <- out[units::drop_units(sm2ac(sf::st_area(out))) > .1, ]
+  out <- buffergroup(out, distance/3.280839895) # ft to meters
+  out$acres <- units::drop_units(sm2ac(sf::st_area(out)))
+  out <- out[out$acres > size, ]
   return(out)
+}
+
+sm2ac <- function(sm) return(sm*.0002471054)
+
+buffergroup <- function(x, dist){
+  # dist is buffer distance & must be in units of CRS
+  y <- sf::st_cast(sf::st_union(sf::st_buffer(x, dist = dist)), to = "POLYGON")
+  x$group <- unlist(sf::st_intersects(x, y))
+  x <- x %>% dplyr::group_by(group) %>%
+    dplyr::summarise(geometry = sf::st_union(geometry))
+  return(x)
 }
