@@ -33,7 +33,12 @@ make_canopy <- function(ndsm, landcover){
     ifelse(i %in% togo, NA, i)
   })
   # mask by vegetated so buildings etc aren't included
-  return(terra::mask(out, landcover))
+  out <- terra::mask(out, landcover)
+
+  levels(out) <-
+    data.frame(value = 1:4, cover = c("shrub", "pole", "partial", "closed"))
+
+  return(out)
 }
 
 
@@ -59,8 +64,8 @@ focal_fun <- function(x, ...){
 #'
 #' @examples
 make_shrub <- function(canopy){
+  canopy[canopy != 1] <- NA # 1 is shrubby
   out <- sf::st_as_sf(terra::as.polygons(canopy))
-  #filter for shrub (1 only)
   #multipolygons to single polygons
   #back to multipolygons, with each one having only polygons w/in some distance
   #from one another
