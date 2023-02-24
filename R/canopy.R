@@ -48,3 +48,23 @@ focal_fun <- function(x, ...){
   ifelse(y > 0, y, NA)
 }
 
+
+#' Polygons of young forest and shrubland
+#'
+#' @param canopy \code{SpatRaster} object showing canopy attributes for area of
+#'   interest, made with \code{make_canopy}
+#'
+#' @return
+#' @export
+#'
+#' @examples
+make_shrub <- function(canopy){
+  out <- sf::st_as_sf(terra::as.polygons(canopy))
+  #filter for shrub (1 only)
+  #multipolygons to single polygons
+  #back to multipolygons, with each one having only polygons w/in some distance
+  #from one another
+  #calculate acreage
+  #filter only multipolygons > 1ac
+  return(out)
+}
