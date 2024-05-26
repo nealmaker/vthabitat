@@ -1,6 +1,6 @@
 ################################################################################
-lat <- 44.3470
-lon <- -72.9965
+lat <- 43.8625
+lon <- -72.6121
 min_gap <- 2  # minimum young forest acreage to be usable habitat
 dist <- 100 # maximum distance (ft) between young areas to be lumped
 ################################################################################
