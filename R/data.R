@@ -1,13 +1,17 @@
+# Pull REST request out of get_ndsm() and make rest_service function. Then all
+# the aoi -> raster functions can call that, just taking server_url (maybe
+# base_url) and query_params.
+
 #' nDSM data for area of interest
 #'
 #' Retrieves most recent normalized digital surface model for area of interest
 #' from the Vermont Center for Geographic Information, and converts it to a
-#' \code{RasterBrick} object
+#' \code{SpatRaster} object
 #'
 #' @param aoi sf polygon object with area of interest geometry. CRS must be
 #'   defined
 #'
-#' @return \code{RasterBrick} object with heights above ground (m) in aoi
+#' @return \code{SpatRaster} object with heights above ground (m) in aoi
 #' @export
 #'
 #' @examples
