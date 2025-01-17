@@ -45,3 +45,26 @@ aoi <- function(property = NA, centroid = NA, size = 2500, expand = T){
   return(sf::st_buffer(sf::st_transform(centroid, sf::st_crs(32145)),
                        buflength))
 }
+
+check_aoi <- function(aoi) {
+  # Error handling: Check if AOI is an sf object
+  # Check if `aoi` is an sf polygon
+  if (!inherits(aoi, "sf") ||
+      !any(grepl("POLYGON", sf::st_geometry_type(aoi)))) {
+    stop("Input 'aoi' must be an sf polygon object.")
+  }
+
+  # Error handling: Check if AOI has a CRS defined
+  if (is.na(sf::st_crs(aoi))) {
+    stop("Error: The input 'aoi' must have a defined CRS.")
+  }
+
+  # Transform AOI to a projected CRS for accurate area calculation (EPSG:3857)
+  aoi_transformed <- sf::st_transform(aoi, crs = 3857)
+
+  # Check if AOI is larger than 5000 acres (1 acre = 4046.86 square meters)
+  aoi_area <- as.numeric(sf::st_area(aoi_transformed)) # Area in square meters
+  if (aoi_area > 5000 * 4046.86) {
+    warning("Warning: The area of interest is larger than 5000 acres, which may result in a large download.")
+  }
+}

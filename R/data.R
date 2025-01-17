@@ -19,27 +19,13 @@
 # ndsm_result <- fetch_ndsm(example_aoi)
 # terra::plot(ndsm_result)
 get_ndsm <- function(aoi) {
-  # Error handling: Check if AOI is an sf object
-  if (!inherits(aoi, "sf")) {
-    stop("Error: The input 'aoi' must be an sf object.")
-  }
+  check_aoi(aoi)
 
-  # Error handling: Check if AOI has a CRS defined
-  if (is.na(sf::st_crs(aoi))) {
-    stop("Error: The input 'aoi' must have a defined CRS.")
-  }
+  # Define the Image Server URL
+  base_url <- "https://maps.vcgi.vermont.gov/arcgis/rest/services/EGC_services/IMG_VCGI_LIDARNDSM_WM_CACHE_v1/ImageServer/exportImage"
 
   # Transform AOI to a projected CRS for accurate area calculation (EPSG:3857)
   aoi_transformed <- sf::st_transform(aoi, crs = 3857)
-
-  # Check if AOI is larger than 5000 acres (1 acre = 4046.86 square meters)
-  aoi_area <- as.numeric(sf::st_area(aoi_transformed)) # Area in square meters
-  if (aoi_area > 5000 * 4046.86) {
-    warning("Warning: The area of interest is larger than 5000 acres, which may result in a large download.")
-  }
-
-  # Define the Image Server URL
-  base_url <- "https://maps.vcgi.vermont.gov/arcgis/rest/services/EGC_services/IMG_VCGI_LIDARNDSM_WM_CACHE_v1/ImageServer"
 
   # Create a bounding box for the AOI in the transformed CRS
   bbox <- sf::st_bbox(aoi_transformed)
@@ -118,28 +104,63 @@ get_clr <- function(aoi){
 #'
 #' @examples
 get_landcover <- function(aoi){
-  endpt <- "https://tiles.arcgis.com/tiles/BkFxaEFNwHqX3tAw/arcgis/rest/services/IMG_VCGI_BASELANDCOVER2016_WM_v1/MapServer"
-  # I was using arcpullr, but it seems to have broken
-  # out <- arcpullr::get_image_layer(
-  #   url = endpt,
-  #   sf_object = sf::st_transform(aoi, sf::st_crs(3857)))
-  # The following is based on the ArcREST documentation
-  # & is returning a 404 error: operation not supported.
-  # Is it because this is really a raster tile service thing?
-  # (Says map service)
-  bbox <- sf::st_bbox(sf::st_transform(aoi, sf::st_crs(3857))) #some better way to clip to aoi
-  url <- paste0(endpt, "/export&bbox=", bbox$xmin, ",", bbox$ymin,
-                ",", bbox$xmax, ",", bbox$ymax, "&f=html")
-  # This seems to be the tile service version, which is probably right.
-  # I think row, column, width, height are based on tiles, so have to
-  # calculate them like how codellama was trying to (below)
-  # not sure if it will allow export, as 'export tiles allowed' is FALSE
-  # url <- paste0(endpt, "/tilemap/", <level>, "/", <row>, "/", <column>, "/",
-  # <width>, "/", <height>)
+  # NOT WORKING! Presumably because tile exports are not allowed. see chat GPT
+  # convo Jan 17, 2025
 
-  res <- httr2::req_perform(httr2::request(url))
-  # somehow turn response body into R-friendly raster
+  check_aoi(aoi)
+
+  # Define the Image Server URL
+  base_url <- "https://tiles.arcgis.com/tiles/BkFxaEFNwHqX3tAw/arcgis/rest/services/IMG_VCGI_BASELANDCOVER2022_WM_v1/MapServer/export"
+
+  # Transform AOI to a projected CRS for accurate area calculation (EPSG:3857)
+  aoi_transformed <- sf::st_transform(aoi, crs = 3857)
+
+  # Create a bounding box for the AOI in the transformed CRS
+  bbox <- sf::st_bbox(aoi_transformed)
+
+  # Construct the query parameters for the Image Server request
+  query_params <- list(
+    bbox = paste(bbox$xmin, bbox$ymin, bbox$xmax, bbox$ymax, sep = ","),
+    format = "png",
+    # pixelType = "S32",
+    # noDataInterpretation = "esriNoDataMatchAny",
+    # interpolation = "+RSP_BilinearInterpolation",
+    # adjustAspectRatio = "true",
+    # validateExtent = "false",
+    # lercVersion = "1",
+    bboxSR = 3857,
+    # imageSR = 3857,
+    # size = paste(width, height, sep = ","),
+    f = "image"#,
+    # renderingRule = "{\"rasterFunction\":\"Hillshade\"}" # Example rule for highest detail (adjust as needed)
+  )
+
+  out <- rest_service(aoi_transformed, base_url, query_params)
   return(out)
+
+  ##############################################################################
+  # endpt <- "https://tiles.arcgis.com/tiles/BkFxaEFNwHqX3tAw/arcgis/rest/services/IMG_VCGI_BASELANDCOVER2016_WM_v1/MapServer"
+  # # I was using arcpullr, but it seems to have broken
+  # # out <- arcpullr::get_image_layer(
+  # #   url = endpt,
+  # #   sf_object = sf::st_transform(aoi, sf::st_crs(3857)))
+  # # The following is based on the ArcREST documentation
+  # # & is returning a 404 error: operation not supported.
+  # # Is it because this is really a raster tile service thing?
+  # # (Says map service)
+  # bbox <- sf::st_bbox(sf::st_transform(aoi, sf::st_crs(3857))) #some better way to clip to aoi
+  # url <- paste0(endpt, "/export&bbox=", bbox$xmin, ",", bbox$ymin,
+  #               ",", bbox$xmax, ",", bbox$ymax, "&f=html")
+  # # This seems to be the tile service version, which is probably right.
+  # # I think row, column, width, height are based on tiles, so have to
+  # # calculate them like how codellama was trying to (below)
+  # # not sure if it will allow export, as 'export tiles allowed' is FALSE
+  # # url <- paste0(endpt, "/tilemap/", <level>, "/", <row>, "/", <column>, "/",
+  # # <width>, "/", <height>)
+  #
+  # res <- httr2::req_perform(httr2::request(url))
+  # # somehow turn response body into R-friendly raster
+  # return(out)
 }
 
 # Here is a url for vector tile services based on ArcREST documentation,
