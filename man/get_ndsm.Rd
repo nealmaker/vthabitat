@@ -11,10 +11,10 @@ get_ndsm(aoi)
 defined}
 }
 \value{
-\code{RasterBrick} object with heights above ground (m) in aoi
+\code{SpatRaster} object with heights above ground (m) in aoi
 }
 \description{
 Retrieves most recent normalized digital surface model for area of interest
 from the Vermont Center for Geographic Information, and converts it to a
-\code{RasterBrick} object
+\code{SpatRaster} object
 }

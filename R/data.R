@@ -1,6 +1,5 @@
-# Pull REST request out of get_ndsm() and make rest_service function. Then all
-# the aoi -> raster functions can call that, just taking server_url (maybe
-# base_url) and query_params.
+# All the aoi -> raster functions should call rest_service(), just taking
+# base_url and query_params.
 
 #' nDSM data for area of interest
 #'
@@ -15,6 +14,10 @@
 #' @export
 #'
 #' @examples
+# library(sf)
+# example_aoi <- sf::st_as_sf(sf::st_as_sfc(sf::st_bbox(c(xmin = -73.2, ymin = 43.6, xmax = -73.1, ymax = 43.7), crs = 4326)))
+# ndsm_result <- fetch_ndsm(example_aoi)
+# terra::plot(ndsm_result)
 get_ndsm <- function(aoi) {
   # Error handling: Check if AOI is an sf object
   if (!inherits(aoi, "sf")) {
@@ -36,34 +39,10 @@ get_ndsm <- function(aoi) {
   }
 
   # Define the Image Server URL
-  image_server_url <- "https://maps.vcgi.vermont.gov/arcgis/rest/services/EGC_services/IMG_VCGI_LIDARNDSM_WM_CACHE_v1/ImageServer"
-
-  # Check internet connection and service availability
-  tryCatch({
-    response <- httr::GET(image_server_url)
-    if (httr::http_error(response)) {
-      stop("Error: The ArcGIS REST service is unavailable.")
-    }
-  }, error = function(e) {
-    stop("Error: Unable to connect to the ArcGIS REST service. Please check your internet connection.")
-  })
+  base_url <- "https://maps.vcgi.vermont.gov/arcgis/rest/services/EGC_services/IMG_VCGI_LIDARNDSM_WM_CACHE_v1/ImageServer"
 
   # Create a bounding box for the AOI in the transformed CRS
   bbox <- sf::st_bbox(aoi_transformed)
-
-  # # Query the service metadata to determine the highest resolution (smallest cell size)
-  # metadata_url <- paste0(image_server_url, "?f=pjson")
-  # metadata_response <- httr::GET(metadata_url)
-  # if (httr::http_error(metadata_response)) {
-  #   stop("Error: Unable to fetch service metadata to determine resolution.")
-  # }
-  # metadata <- jsonlite::fromJSON(httr::content(metadata_response, as = "text"))
-  # highest_resolution <- min(unlist(metadata$minScale, use.names = FALSE))
-  #
-  # # Dynamically calculate the size parameter based on the bounding box dimensions and highest resolution
-  # resolution <- highest_resolution / 2.54
-  # width <- ceiling((bbox$xmax - bbox$xmin) / resolution)
-  # height <- ceiling((bbox$ymax - bbox$ymin) / resolution)
 
   # Construct the query parameters for the Image Server request
   query_params <- list(
@@ -82,41 +61,10 @@ get_ndsm <- function(aoi) {
     # renderingRule = "{\"rasterFunction\":\"Hillshade\"}" # Example rule for highest detail (adjust as needed)
   )
 
-  # Fetch the raster data from the Image Server
-  file_ext <- paste0(".", query_params$format)
-
-  query_url <- httr2::request(paste0(image_server_url, "/exportImage"))
-  for (param in names(query_params)) {
-    query_url <- httr2::req_url_query(query_url,
-                                      !!param := query_params[[param]])
-  }
-
-  raster_response <- tryCatch({
-    httr2::req_perform(
-      query_url, path = tempfile(fileext = file_ext)
-    )
-  }, error = function(e) {
-    stop("Error: Failed to fetch the raster data from the ArcGIS REST service.")
-  })
-
-  # Load the raster data into R using terra
-  ndsm_raster <- terra::rast(raster_response$body[1])
-
-  # Ensure the raster is in the desired CRS (EPSG:3857)
-  ndsm_raster <- terra::project(ndsm_raster, "EPSG:3857")
-
-  # Clip the raster to match the AOI's irregular shape
-  ndsm_raster <- terra::mask(ndsm_raster, terra::vect(aoi_transformed))
-
-  # Return the resulting raster
-  return(ndsm_raster)
+  out <- rest_service(aoi_transformed, base_url, query_params)
+  return(out)
 }
 
-# Example usage (uncomment to test with an actual AOI)
-# library(sf)
-# example_aoi <- sf::st_as_sf(sf::st_as_sfc(sf::st_bbox(c(xmin = -73.2, ymin = 43.6, xmax = -73.1, ymax = 43.7), crs = 4326)))
-# ndsm_result <- fetch_ndsm(example_aoi)
-# terra::plot(ndsm_result)
 
 # get_ndsm <- function(aoi){
 #   endpt <- "https://maps.vcgi.vermont.gov/arcgis/rest/services/EGC_services/IMG_VCGI_LIDARNDSM_WM_CACHE_v1/ImageServer"
