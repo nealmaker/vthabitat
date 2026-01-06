@@ -196,3 +196,60 @@ get_wetlands <- function(aoi) {
 
   return(out)
 }
+
+
+#' Hardwood and softwood canopy data for area of interest
+#'
+#' Retrieves 2022 Vermont modeled tree type data for area of interest from local
+#' raster data. Requires \code{set_data_path()} to be configured first.
+#'
+#' @param aoi sf polygon object with area of interest geometry. CRS must be
+#'   defined.
+#'
+#' @return \code{SpatRaster} object with tree type class values for aoi. Classes
+#'   include Coniferous and Deciduous.
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' # Set data path first
+#' set_data_path("~/vthabitat_data")
+#'
+#' # Get canopy type for an area of interest
+#' pt <- centroid(44.393, -72.487)
+#' my_aoi <- aoi(centroid = pt, size = 100)
+#' treetype <- treetype(my_aoi)
+#' terra::plot(treetype)
+#' }
+get_treetype <- function(aoi) {
+  data_path <- get_data_path()
+  treetype_dir <- file.path(data_path, "LandLandcov_TreeCanopy2022")
+  treetype_file <- file.path(treetype_dir, "LandLandcov_TreeCanopy2022.tif")
+
+  if (!file.exists(treetype_file)) {
+    stop("Tree type data not found at: ", treetype_file, "\n",
+         "Download from geodata.vermont.gov and place in: ", treetype_dir,
+         " or use set_data_path function.")
+  }
+
+  # Read raster
+  treetype_rast <- terra::rast(treetype_file)
+
+  # Load category labels from .vat.dbf if not already set
+  if (is.null(terra::cats(treetype_rast)[[1]])) {
+    vat_file <- paste0(treetype_file, ".vat.dbf")
+    if (file.exists(vat_file)) {
+      vat <- foreign::read.dbf(vat_file)
+      name_col <- setdiff(names(vat), c("Value", "Count", "OID"))[1]
+      if (!is.null(name_col)) {
+        levels(treetype_rast) <- data.frame(value = vat$Value, label = vat[[name_col]])
+      }
+    }
+  }
+
+  # Crop to AOI
+  aoi_transformed <- sf::st_transform(aoi, terra::crs(treetype_rast))
+  out <- terra::crop(treetype_rast, aoi_transformed, mask = TRUE)
+
+  return(out)
+}
