@@ -30,7 +30,7 @@
 aoi <- function(property = NA, centroid = NA, size = 2500, expand = T){
   buflength <- sqrt((size * 43560) / pi) / 3.28084 # meters
 
-  if(all(!is.na(property))){
+  if(any(!is.na(property))){
     # merge features for muti-feature shapefiles before getting centroid
     prop1 <- property %>% dplyr::mutate(axT5 = 1) %>% dplyr::group_by(.data$axT5) %>%
       dplyr::summarize(geometry = sf::st_union(.data$geometry)) %>% dplyr::ungroup()

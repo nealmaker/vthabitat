@@ -23,7 +23,7 @@
 #' map_context(clr, lc)
 #' }
 map_context <- function(clr, landcover, prop = NA){
-  if (any(is.na(prop))) {
+  if (all(is.na(prop))) {
     tmap::tm_shape(clr) + tmap::tm_rgb(alpha = .9) +
       tmap::tm_shape(landcover) + tmap::tm_raster(alpha = .35)
   } else {
@@ -63,7 +63,7 @@ map_context <- function(clr, landcover, prop = NA){
 #' map_canopy(canopy)
 #' }
 map_canopy <- function(canopy, prop = NA){
-  if (any(is.na(prop))) {
+  if (all(is.na(prop))) {
     tmap::tm_shape(canopy) +
       tmap::tm_raster(title = "tree canopy",
                       palette = c("#9e4103", "#efde9b", "#85b57c", "#0a3f00"),
@@ -107,7 +107,7 @@ map_canopy <- function(canopy, prop = NA){
 #' map_shrub(clr, lc, shrub)
 #' }
 map_shrub <- function(clr, landcover, shrub, prop = NA){
-  if (any(is.na(prop))) {
+  if (all(is.na(prop))) {
     tmap::tm_shape(clr) + tmap::tm_rgb(alpha = .8) +
       tmap::tm_shape(landcover) + tmap::tm_raster(alpha = .25) +
       tmap::tm_shape(shrub) +
