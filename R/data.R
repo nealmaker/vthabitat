@@ -1,227 +1,198 @@
-# All the aoi -> raster functions should call rest_service(), just taking
-# base_url and query_params.
-
 #' nDSM data for area of interest
 #'
 #' Retrieves most recent normalized digital surface model for area of interest
-#' from the Vermont Center for Geographic Information, and converts it to a
-#' \code{SpatRaster} object
+#' from the Vermont Center for Geographic Information.
 #'
 #' @param aoi sf polygon object with area of interest geometry. CRS must be
-#'   defined
+#'   defined.
 #'
 #' @return \code{SpatRaster} object with heights above ground (m) in aoi
 #' @export
 #'
 #' @examples
-# library(sf)
-# example_aoi <- sf::st_as_sf(sf::st_as_sfc(sf::st_bbox(c(xmin = -73.2, ymin = 43.6, xmax = -73.1, ymax = 43.7), crs = 4326)))
-# ndsm_result <- fetch_ndsm(example_aoi)
-# terra::plot(ndsm_result)
-get_ndsm <- function(aoi) {
-  check_aoi(aoi)
+#' \dontrun{
+#' # Get nDSM for an area of interest
+#' pt <- centroid(44.393, -72.487)
+#' my_aoi <- aoi(centroid = pt, size = 100)
+#' ndsm <- get_ndsm(my_aoi)
+#' terra::plot(ndsm)
+#' }
+get_ndsm <- function(aoi){
+  # Download tiff directly - arcpullr has issues with tiff format for this service
+  bbox <- sf::st_bbox(sf::st_transform(aoi, sf::st_crs(3857)))
+  bbox_str <- paste(bbox["xmin"], bbox["ymin"], bbox["xmax"], bbox["ymax"], sep = ",")
 
-  # Define the Image Server URL
-  base_url <- "https://maps.vcgi.vermont.gov/arcgis/rest/services/EGC_services/IMG_VCGI_LIDARNDSM_WM_CACHE_v1/ImageServer/exportImage"
-
-  # Transform AOI to a projected CRS for accurate area calculation (EPSG:3857)
-  aoi_transformed <- sf::st_transform(aoi, crs = 3857)
-
-  # Create a bounding box for the AOI in the transformed CRS
-  bbox <- sf::st_bbox(aoi_transformed)
-
-  # Construct the query parameters for the Image Server request
-  query_params <- list(
-    bbox = paste(bbox$xmin, bbox$ymin, bbox$xmax, bbox$ymax, sep = ","),
-    format = "tiff",
-    pixelType = "S32",
-    noDataInterpretation = "esriNoDataMatchAny",
-    interpolation = "+RSP_BilinearInterpolation",
-    adjustAspectRatio = "true",
-    validateExtent = "false",
-    lercVersion = "1",
-    # bboxSR = 3857,
-    # imageSR = 3857,
-    # size = paste(width, height, sep = ","),
-    f = "image"#,
-    # renderingRule = "{\"rasterFunction\":\"Hillshade\"}" # Example rule for highest detail (adjust as needed)
+  url <- paste0(
+    "https://maps.vcgi.vermont.gov/arcgis/rest/services/EGC_services/",
+    "IMG_VCGI_LIDARNDSM_WM_CACHE_v1/ImageServer/exportImage?",
+    "bbox=", bbox_str,
+    "&bboxSR=3857&imageSR=3857&format=tiff&f=image"
   )
 
-  out <- rest_service(aoi_transformed, base_url, query_params)
+  tmp <- tempfile(fileext = ".tif")
+  utils::download.file(url, tmp, mode = "wb", quiet = TRUE)
+  out <- terra::rast(tmp)
+
+  # Transform to Vermont State Plane (EPSG:32145) for consistency with local data
+  out <- terra::project(out, "EPSG:32145")
+
+  # Crop to AOI
+  aoi_transformed <- sf::st_transform(aoi, terra::crs(out))
+  out <- terra::crop(out, aoi_transformed, mask = TRUE)
+
   return(out)
 }
-
-
-# get_ndsm <- function(aoi){
-#   endpt <- "https://maps.vcgi.vermont.gov/arcgis/rest/services/EGC_services/IMG_VCGI_LIDARNDSM_WM_CACHE_v1/ImageServer"
-#   out <- arcpullr::get_image_layer(
-#     url = endpt,
-#     sf_object = sf::st_transform(aoi, sf::st_crs(3857)),
-#     format = 'tiff')
-#   return(out)
-# }
 
 
 #' Color orthophoto for area of interest
 #'
 #' Retrieves most recent color orthoimagery for area of interest from the
-#' Vermont Center for Geographic Information, and converts it to a
-#' \code{RasterBrick} object
+#' Vermont Center for Geographic Information.
 #'
 #' @param aoi sf polygon object with area of interest geometry. CRS must be
-#'   defined
+#'   defined.
 #'
-#' @return \code{RasterBrick} object with RGB color orthoimage for aoi
+#' @return \code{SpatRaster} object with RGB color orthoimage for aoi
 #' @export
 #'
 #' @examples
+#' \dontrun{
+#' # Get color orthophoto for an area of interest
+#' pt <- centroid(44.393, -72.487)
+#' my_aoi <- aoi(centroid = pt, size = 100)
+#' clr <- get_clr(my_aoi)
+#' terra::plotRGB(clr)
+#' }
 get_clr <- function(aoi){
   endpt <- "https://maps.vcgi.vermont.gov/arcgis/rest/services/EGC_services/IMG_VCGI_CLR_WM_CACHE/ImageServer"
-  # out <- arcpullr::get_image_layer(
-  #   url = endpt,
-  #   sf_object = sf::st_transform(aoi, sf::st_crs(3857)))
-  bbox <- sf::st_bbox(sf::st_transform(aoi, sf::st_crs(3857))) #some better way to clip to aoi
-  url <- paste0(endpt, "/exportImage?f=image&bbox=", bbox$xmin, ",", bbox$ymin,
-                ",", bbox$xmax, ",", bbox$ymax)
-  res <- httr2::req_perform(httr2::request(url))
-  # need to turn response body into something I can use in R
+  out <- arcpullr::get_image_layer(
+    url = endpt,
+    sf_object = sf::st_transform(aoi, sf::st_crs(3857)))
+
+  # Transform to Vermont State Plane (EPSG:32145) for consistency with local data
+  out <- terra::project(out, "EPSG:32145")
+
+  # Crop to AOI
+  aoi_transformed <- sf::st_transform(aoi, terra::crs(out))
+  out <- terra::crop(out, aoi_transformed, mask = TRUE)
+
   return(out)
 }
 
 
 #' Landcover data for area of interest
 #'
-#' Retrieves 2016, 0.5m resolution Vermont landcover data for area of interest
-#' from the Vermont Center for Geographic Information, and converts it to a
-#' \code{RasterBrick} object
+#' Retrieves 2022 Vermont base landcover data for area of interest from local
+#' raster data. Requires \code{set_data_path()} to be configured first.
 #'
 #' @param aoi sf polygon object with area of interest geometry. CRS must be
-#'   defined
+#'   defined.
 #'
-#' @return \code{RasterBrick} object with RGB color image of landcover classes
-#'   in aoi
+#' @return \code{SpatRaster} object with landcover class values for aoi. The
+#'   raster includes category labels from the source data.
 #' @export
 #'
 #' @examples
-get_landcover <- function(aoi){
-  # NOT WORKING! Presumably because tile exports are not allowed. see chat GPT
-  # convo Jan 17, 2025
+#' \dontrun{
+#' # Set data path first
+#' set_data_path("~/vthabitat_data")
+#'
+#' # Get landcover for an area of interest
+#' pt <- centroid(44.393, -72.487)
+#' my_aoi <- aoi(centroid = pt, size = 100)
+#' lc <- get_landcover(my_aoi)
+#' terra::plot(lc)
+#'
+#' # View land cover categories
+#' terra::cats(lc)
+#' }
+get_landcover <- function(aoi) {
+  data_path <- get_data_path()
+  lc_dir <- file.path(data_path, "Landlandcov_BaseLC2022")
+  lc_file <- file.path(lc_dir, "Landlandcov_BaseLC2022.tif")
 
-  check_aoi(aoi)
+  if (!file.exists(lc_file)) {
+    stop("Land cover data not found at: ", lc_file, "\n",
+         "Download from geodata.vermont.gov and place in: ", lc_dir,
+         " or use set_data_path function.")
+  }
 
-  # Define the Image Server URL
-  base_url <- "https://tiles.arcgis.com/tiles/BkFxaEFNwHqX3tAw/arcgis/rest/services/IMG_VCGI_BASELANDCOVER2022_WM_v1/MapServer/export"
+  # Read raster
+  lc_rast <- terra::rast(lc_file)
 
-  # Transform AOI to a projected CRS for accurate area calculation (EPSG:3857)
-  aoi_transformed <- sf::st_transform(aoi, crs = 3857)
+  # Load category labels from .vat.dbf if not already set
+  if (is.null(terra::cats(lc_rast)[[1]])) {
+    vat_file <- paste0(lc_file, ".vat.dbf")
+    if (file.exists(vat_file)) {
+      vat <- foreign::read.dbf(vat_file)
+      # Assuming columns: Value, Count, and a class name column
+      name_col <- setdiff(names(vat), c("Value", "Count", "OID"))[1]
+      if (!is.null(name_col)) {
+        levels(lc_rast) <- data.frame(value = vat$Value, label = vat[[name_col]])
+      }
+    }
+  }
 
-  # Create a bounding box for the AOI in the transformed CRS
-  bbox <- sf::st_bbox(aoi_transformed)
+  # Crop to AOI
+  aoi_transformed <- sf::st_transform(aoi, terra::crs(lc_rast))
+  out <- terra::crop(lc_rast, aoi_transformed, mask = TRUE)
 
-  # Construct the query parameters for the Image Server request
-  query_params <- list(
-    bbox = paste(bbox$xmin, bbox$ymin, bbox$xmax, bbox$ymax, sep = ","),
-    format = "png",
-    # pixelType = "S32",
-    # noDataInterpretation = "esriNoDataMatchAny",
-    # interpolation = "+RSP_BilinearInterpolation",
-    # adjustAspectRatio = "true",
-    # validateExtent = "false",
-    # lercVersion = "1",
-    bboxSR = 3857,
-    # imageSR = 3857,
-    # size = paste(width, height, sep = ","),
-    f = "image"#,
-    # renderingRule = "{\"rasterFunction\":\"Hillshade\"}" # Example rule for highest detail (adjust as needed)
-  )
-
-  out <- rest_service(aoi_transformed, base_url, query_params)
   return(out)
-
-  ##############################################################################
-  # endpt <- "https://tiles.arcgis.com/tiles/BkFxaEFNwHqX3tAw/arcgis/rest/services/IMG_VCGI_BASELANDCOVER2016_WM_v1/MapServer"
-  # # I was using arcpullr, but it seems to have broken
-  # # out <- arcpullr::get_image_layer(
-  # #   url = endpt,
-  # #   sf_object = sf::st_transform(aoi, sf::st_crs(3857)))
-  # # The following is based on the ArcREST documentation
-  # # & is returning a 404 error: operation not supported.
-  # # Is it because this is really a raster tile service thing?
-  # # (Says map service)
-  # bbox <- sf::st_bbox(sf::st_transform(aoi, sf::st_crs(3857))) #some better way to clip to aoi
-  # url <- paste0(endpt, "/export&bbox=", bbox$xmin, ",", bbox$ymin,
-  #               ",", bbox$xmax, ",", bbox$ymax, "&f=html")
-  # # This seems to be the tile service version, which is probably right.
-  # # I think row, column, width, height are based on tiles, so have to
-  # # calculate them like how codellama was trying to (below)
-  # # not sure if it will allow export, as 'export tiles allowed' is FALSE
-  # # url <- paste0(endpt, "/tilemap/", <level>, "/", <row>, "/", <column>, "/",
-  # # <width>, "/", <height>)
-  #
-  # res <- httr2::req_perform(httr2::request(url))
-  # # somehow turn response body into R-friendly raster
-  # return(out)
 }
 
-# Here is a url for vector tile services based on ArcREST documentation,
-# seems to work, but need token to access data:
-# 'https://tiles.arcgis.com/tiles/BkFxaEFNwHqX3tAw/arcgis/rest/services/VECTOR_VCGI_WETLANDS2016_WM_v1/VectorTileServer/exportTiles?&exportExtent={"spatialReference":{"wkid":102100,"latestWkid":3857},"xmax":1.936330167439007E7,"xmin":1.8878385166948937E7,"ymax":-5133377.883934237,"ymin":-5466031.831031308}&levels=0'
-# export extent is bounding box; can also use polygon to clip to shape
 
-# Based on codellama suggestion. This is wrong, but has some maybe useful things
-# I might refer to later:
-# fetch_vector_tile_data <- function(aoi, tile_service_url, layer_name) {
-#   # Determine the tile extent and zoom level based on the AOI
-#   tile_extent <- sf::st_bbox(sf::st_transform(aoi, 3857)) # Web Mercator (EPSG:3857)
-#   tile_zoom <- 19 # use most zoomed in zoom level available
-#
-#   # Define tile coordinates: tiles numbered from upper left, size based on the zoom level
-#   # CALCULATIONS UNTESTED FROM CODELLAMA
-#   x = floor((tile_extent$xmin + 20037508.34) / (256 * 2 ^ tile_zoom))
-#   y = floor((20037508.34 - tile_extent$ymax) / (256 * 2 ^ tile_zoom))
-#   xmax <- ceiling((tile_extent$xmax + 20037508.34) / (256 * 2 ^ tile_zoom))
-#   ymax <- ceiling((20037508.34 - tile_extent$ymin) / (256 * 2 ^ tile_zoom))
-#
-#   # Construct the tile request URL
-#   # THIS CONNECTS, BUT CONTENT OF REPLY IS EMPTY
-#   # COULD BE THAT I HAVEN"T TRIED VALID TILE COORDINATAES (x, y, xmax, ymax)
-#   # DON"T KNOW IF 'layer' & 'bbox' DO ANYTHING
-#   # OR EVEN IF I CAN FETCH MULTIPLE TILES AT ONCE
-#   # !!!see: https://developers.arcgis.com/rest/services-reference/enterprise/export-tiles-vector-tile-service/
-#   tile_url <- paste0(tile_service_url, "/tile/", tile_zoom, "/",
-#                      x, "/", y, ".pbf?layer=", layer_name, "&bbox=", x, ",", y,
-#                      ",", xmax, ",", ymax)
-#
-#   # Send a GET request to the vector tile service
-#   req <- httr2::request(tile_url)
-#   res <- req |> httr2::req_perform(req)
-#
-#   # Check if the request was successful
-#   if (status_code(response) != 200) {
-#     stop("Error fetching vector tile data:", status_code(response))
-#   }
-#
-#   # LOOK INTO osmextract PACKAGE, WHICH MIGHT PARSE .pbf FILES
-#   # FROM PHIND: One key function in the osmextract package is oe_vectortranslate(), which converts .pbf files into .gpkg (GeoPackage) format. This conversion is performed using ogr2ogr through the vectortranslate utility in sf::gdal_utils(). The .gpkg format is chosen because it offers database capabilities such as random access and querying, which are crucial for handling large datasets like those found in OSM 1.
-# }
-
-#' Wetlands in area of interest
+#' Wetlands data for area of interest
 #'
-#' Retrieves 2016 Vermont wetlands data for area of interest from the Vermont
-#' Center for Geographic Information, and converts it to a ??? object
+#' Retrieves 2022 Vermont modeled wetlands data for area of interest from local
+#' raster data. Requires \code{set_data_path()} to be configured first.
 #'
 #' @param aoi sf polygon object with area of interest geometry. CRS must be
-#'   defined
+#'   defined.
 #'
-#' @return \code{???} object containing wetlands in aoi
+#' @return \code{SpatRaster} object with wetland class values for aoi. Classes
+#'   include Emergent, Forested, and Scrub/Shrub wetlands.
 #' @export
 #'
 #' @examples
-# get_wetlands <- function(aoi){
-#   endpt <- "https://maps.vcgi.vermont.gov/arcgis/rest/services/EGC_services/VECTOR_VCGI_WETLANDS2016_WM_v1/VectorTileServer"
-#   # arcpullr never worked here:
-#   out <- arcpullr::get_image_layer(
-#     url = endpt,
-#     sf_object = sf::st_transform(aoi, sf::st_crs(3857)))
-#   return(out)
-# }
+#' \dontrun{
+#' # Set data path first
+#' set_data_path("~/vthabitat_data")
+#'
+#' # Get wetlands for an area of interest
+#' pt <- centroid(44.393, -72.487)
+#' my_aoi <- aoi(centroid = pt, size = 100)
+#' wetlands <- get_wetlands(my_aoi)
+#' terra::plot(wetlands)
+#' }
+get_wetlands <- function(aoi) {
+  data_path <- get_data_path()
+  wet_dir <- file.path(data_path, "LandLandcov_Wetlands2022")
+  wet_file <- file.path(wet_dir, "LandLandcov_Wetlands2022.tif")
+
+  if (!file.exists(wet_file)) {
+    stop("Wetlands data not found at: ", wet_file, "\n",
+         "Download from geodata.vermont.gov and place in: ", wet_dir,
+         " or use set_data_path function.")
+  }
+
+  # Read raster
+  wet_rast <- terra::rast(wet_file)
+
+  # Load category labels from .vat.dbf if not already set
+  if (is.null(terra::cats(wet_rast)[[1]])) {
+    vat_file <- paste0(wet_file, ".vat.dbf")
+    if (file.exists(vat_file)) {
+      vat <- foreign::read.dbf(vat_file)
+      name_col <- setdiff(names(vat), c("Value", "Count", "OID"))[1]
+      if (!is.null(name_col)) {
+        levels(wet_rast) <- data.frame(value = vat$Value, label = vat[[name_col]])
+      }
+    }
+  }
+
+  # Crop to AOI
+  aoi_transformed <- sf::st_transform(aoi, terra::crs(wet_rast))
+  out <- terra::crop(wet_rast, aoi_transformed, mask = TRUE)
+
+  return(out)
+}

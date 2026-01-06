@@ -20,3 +20,18 @@ aerial photo and, optionally, the property boundaries.
 \description{
 Landscape context map
 }
+\examples{
+\dontrun{
+# Set data path first
+set_data_path("~/vthabitat_data")
+
+# Get data for area of interest
+pt <- centroid(44.393, -72.487)
+my_aoi <- aoi(centroid = pt, size = 100)
+clr <- get_clr(my_aoi)
+lc <- get_landcover(my_aoi)
+
+# Create landscape context map
+map_context(clr, lc)
+}
+}

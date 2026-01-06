@@ -18,3 +18,19 @@ optionally, the property boundaries.
 \description{
 Tree canopy map
 }
+\examples{
+\dontrun{
+# Set data path first
+set_data_path("~/vthabitat_data")
+
+# Get data and create canopy raster
+pt <- centroid(44.393, -72.487)
+my_aoi <- aoi(centroid = pt, size = 100)
+ndsm <- get_ndsm(my_aoi)
+lc <- get_landcover(my_aoi)
+canopy <- make_canopy(ndsm, lc)
+
+# Create canopy map
+map_canopy(canopy)
+}
+}

@@ -15,3 +15,9 @@ sf object
 \description{
 Convert shapefile to sf object
 }
+\examples{
+\dontrun{
+# Read a shapefile
+property <- shp2sf("path/to/property.shp")
+}
+}

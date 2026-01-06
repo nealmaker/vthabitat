@@ -22,3 +22,21 @@ overlain on an aerial photo and, optionally, the property boundaries.
 \description{
 Shrub/young forest map
 }
+\examples{
+\dontrun{
+# Set data path first
+set_data_path("~/vthabitat_data")
+
+# Get data and create shrub polygons
+pt <- centroid(44.393, -72.487)
+my_aoi <- aoi(centroid = pt, size = 500)
+clr <- get_clr(my_aoi)
+ndsm <- get_ndsm(my_aoi)
+lc <- get_landcover(my_aoi)
+canopy <- make_canopy(ndsm, lc)
+shrub <- make_shrub(canopy)
+
+# Create shrub/young forest map
+map_shrub(clr, lc, shrub)
+}
+}

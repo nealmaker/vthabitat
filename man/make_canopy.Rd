@@ -7,11 +7,11 @@
 make_canopy(ndsm, landcover)
 }
 \arguments{
-\item{ndsm}{\code{RasterBrick} object with heights above ground (m) for area
-of interest, from \code{get_ndsm}}
+\item{ndsm}{\code{SpatRaster} or \code{RasterBrick} object with heights above
+ground (m) for area of interest, from \code{get_ndsm}}
 
-\item{landcover}{\code{RasterBrick} object with RGB color image of VT 2016
-landcover classes for area of interest, from \code{get_landcover}}
+\item{landcover}{\code{SpatRaster} object with landcover classes for area of
+interest, from \code{get_landcover}. Must have category labels set.}
 }
 \value{
 \code{SpatRaster} object showing canopy attributes for area of
@@ -21,4 +21,20 @@ partial overstories, and (4) closed overstories
 \description{
 Create SpatRaster showing forest canopy attributes in area of interest, based
 on nDSM and landcover data
+}
+\examples{
+\dontrun{
+# Set data path first
+set_data_path("~/vthabitat_data")
+
+# Get data for area of interest
+pt <- centroid(44.393, -72.487)
+my_aoi <- aoi(centroid = pt, size = 100)
+ndsm <- get_ndsm(my_aoi)
+lc <- get_landcover(my_aoi)
+
+# Create canopy classification
+canopy <- make_canopy(ndsm, lc)
+terra::plot(canopy)
+}
 }

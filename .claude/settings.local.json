@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat:*)",
+      "Bash(grep:*)",
+      "Bash(for f in R/*.R)",
+      "Bash(do grep -B3 \"^[a-z_].*<- function\" \"$f\")",
+      "Bash(done)",
+      "Bash(wc:*)",
+      "WebSearch",
+      "WebFetch(domain:geodata.vermont.gov)",
+      "WebFetch(domain:vcgi.vermont.gov)",
+      "WebFetch(domain:maps.vcgi.vermont.gov)",
+      "WebFetch(domain:vcgi.maps.arcgis.com)",
+      "WebFetch(domain:tiles.arcgis.com)"
+    ]
+  }
+}

@@ -17,15 +17,23 @@
 #' @export
 #'
 #' @examples
+#' # Create AOI from a point location
+#' pt <- centroid(44.393, -72.487)
+#' landscape <- aoi(centroid = pt, size = 500)
+#' print(landscape)
+#'
+#' \dontrun{
+#' # Create AOI from a property shapefile
+#' property <- shp2sf("property.shp")
+#' landscape <- aoi(property = property, size = 2500, expand = TRUE)
+#' }
 aoi <- function(property = NA, centroid = NA, size = 2500, expand = T){
-  geometry = axT5 = NULL # to make cmd check "no visible binding" note go away
-
   buflength <- sqrt((size * 43560) / pi) / 3.28084 # meters
 
-  if(!is.na(property)){
+  if(all(!is.na(property))){
     # merge features for muti-feature shapefiles before getting centroid
-    prop1 <- property %>% dplyr::mutate(axT5 = 1) %>% dplyr::group_by(axT5) %>%
-      dplyr::summarize(geometry = sf::st_union(geometry)) %>% dplyr::ungroup()
+    prop1 <- property %>% dplyr::mutate(axT5 = 1) %>% dplyr::group_by(.data$axT5) %>%
+      dplyr::summarize(geometry = sf::st_union(.data$geometry)) %>% dplyr::ungroup()
 
     centroid <- sf::st_centroid(prop1)
 

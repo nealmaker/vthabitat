@@ -8,14 +8,34 @@ make_shrub(canopy, size = 1, distance = 100)
 }
 \arguments{
 \item{canopy}{\code{SpatRaster} object showing canopy attributes for area of
-interest, made with \code{make_canopy}. Currently CRS must be in meters, or
-areas will fail silently!}
+interest, made with \code{make_canopy}. CRS must use meters as linear unit.}
 
 \item{size}{minimum size, in acres, a shrubby area must occupy for inclusion}
 
 \item{distance}{maximum distance, in feet, two shrub polygons can be from
 one-another and still count as a single shrubby area}
 }
+\value{
+\code{sf} object containing polygons of shrub/young forest areas
+that meet the minimum size threshold, with an \code{acres} column.
+}
 \description{
 Polygons of young forest and shrubland
+}
+\examples{
+\dontrun{
+# Set data path first
+set_data_path("~/vthabitat_data")
+
+# Get data and create canopy raster
+pt <- centroid(44.393, -72.487)
+my_aoi <- aoi(centroid = pt, size = 500)
+ndsm <- get_ndsm(my_aoi)
+lc <- get_landcover(my_aoi)
+canopy <- make_canopy(ndsm, lc)
+
+# Extract shrub/young forest polygons (min 1 acre, within 100 ft)
+shrub <- make_shrub(canopy, size = 1, distance = 100)
+plot(shrub)
+}
 }

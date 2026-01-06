@@ -11,6 +11,9 @@
 #' @export
 #'
 #' @examples
+#' # Create a centroid for a location in Vermont
+#' pt <- centroid(44.393, -72.487)
+#' print(pt)
 centroid <- function(lat, lon){
   dat <- data.frame(lat = lat, lon = lon)
   cent <- sf::st_set_crs(sf::st_as_sf(dat, coords = c("lon", "lat")), 4326)
@@ -26,6 +29,10 @@ centroid <- function(lat, lon){
 #' @export
 #'
 #' @examples
+#' \dontrun{
+#' # Read a shapefile
+#' property <- shp2sf("path/to/property.shp")
+#' }
 shp2sf <- function(file){
   sf::st_set_crs(sf::st_read(file), 32145)
 }

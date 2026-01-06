@@ -19,3 +19,8 @@ Vermont)
 Manually enter latitude and longitude to create an sf centroid object that
 can later be used to define an area of interest, for example.
 }
+\examples{
+# Create a centroid for a location in Vermont
+pt <- centroid(44.393, -72.487)
+print(pt)
+}

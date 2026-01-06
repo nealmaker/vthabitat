@@ -8,13 +8,21 @@ get_clr(aoi)
 }
 \arguments{
 \item{aoi}{sf polygon object with area of interest geometry. CRS must be
-defined}
+defined.}
 }
 \value{
-\code{RasterBrick} object with RGB color orthoimage for aoi
+\code{SpatRaster} object with RGB color orthoimage for aoi
 }
 \description{
 Retrieves most recent color orthoimagery for area of interest from the
-Vermont Center for Geographic Information, and converts it to a
-\code{RasterBrick} object
+Vermont Center for Geographic Information.
+}
+\examples{
+\dontrun{
+# Get color orthophoto for an area of interest
+pt <- centroid(44.393, -72.487)
+my_aoi <- aoi(centroid = pt, size = 100)
+clr <- get_clr(my_aoi)
+terra::plotRGB(clr)
+}
 }

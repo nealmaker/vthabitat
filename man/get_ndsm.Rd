@@ -8,13 +8,21 @@ get_ndsm(aoi)
 }
 \arguments{
 \item{aoi}{sf polygon object with area of interest geometry. CRS must be
-defined}
+defined.}
 }
 \value{
 \code{SpatRaster} object with heights above ground (m) in aoi
 }
 \description{
 Retrieves most recent normalized digital surface model for area of interest
-from the Vermont Center for Geographic Information, and converts it to a
-\code{SpatRaster} object
+from the Vermont Center for Geographic Information.
+}
+\examples{
+\dontrun{
+# Get nDSM for an area of interest
+pt <- centroid(44.393, -72.487)
+my_aoi <- aoi(centroid = pt, size = 100)
+ndsm <- get_ndsm(my_aoi)
+terra::plot(ndsm)
+}
 }

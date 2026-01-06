@@ -1,22 +1,40 @@
 #' Landcover summary
 #'
-#' Summarizes percentage of land area in each of eight cover types, based on a
-#' raster layer of Vermont's 2016 landcover data for a given area
+#' Summarizes percentage of land area in each cover type, based on a raster
+#' layer of Vermont's 2022 base landcover data for a given area.
 #'
-#' @param landcover \code{RasterBrick} object with RGB color image of VT 2016
-#'   landcover classes, from \code{get_landcover}
+#' @param landcover \code{SpatRaster} object with landcover classes from
+#'   \code{get_landcover}. Must have category labels set.
 #'
-#' @return data frame of cover types and the percentage of land area covered by
-#'   each
+#' @return data frame with columns \code{cover} (land cover class name) and
+#'   \code{pct} (percentage of non-NA area in each class)
 #' @export
 #'
 #' @examples
-land_summary <- function(landcover){
-  x <- summary(as.factor(arcpullr::raster_colors(landcover)$color))
-  # remove NA values (masked cells), which show up as roads
-  x[which(names(x) == "#000000")] <-
-    x[which(names(x) == "#000000")] - (sum(is.na(landcover@data@values))/3)
+#' \dontrun{
+#' # Set data path first
+#' set_data_path("~/vthabitat_data")
+#'
+#' # Get landcover for an area of interest
+#' pt <- centroid(44.393, -72.487)
+#' my_aoi <- aoi(centroid = pt, size = 100)
+#' lc <- get_landcover(my_aoi)
+#'
+#' # Summarize land cover percentages
+#' land_summary(lc)
+#' }
+land_summary <- function(landcover) {
+  # Get frequency table of cell values
+  freq_table <- terra::freq(landcover)
+
+  # Remove NA row if present
+  freq_table <- freq_table[!is.na(freq_table$value), ]
+
+  # terra::freq() returns category labels directly in the value column
+  # when the raster has categories set
+  total_cells <- sum(freq_table$count)
   data.frame(
-    cover = landcover_key$cover[match(names(x), landcover_key$color)],
-    pct = 100 * x / sum(x))
+    cover = freq_table$value,
+    pct = 100 * freq_table$count / total_cells
+  )
 }

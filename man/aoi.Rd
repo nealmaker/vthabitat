@@ -29,3 +29,15 @@ EPSG:32145 (NAD83 / Vermont)
 \description{
 Create area of interest (aka landscape area)
 }
+\examples{
+# Create AOI from a point location
+pt <- centroid(44.393, -72.487)
+landscape <- aoi(centroid = pt, size = 500)
+print(landscape)
+
+\dontrun{
+# Create AOI from a property shapefile
+property <- shp2sf("property.shp")
+landscape <- aoi(property = property, size = 2500, expand = TRUE)
+}
+}
