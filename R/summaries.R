@@ -1,3 +1,44 @@
+
+#' Summarized landscape elements
+#'
+#' @param property sf polygon object with property of interest
+#' @param yf_size acreage of young forest blocks that qualifies them as young
+#'   forest habitat. Defaults to 1 ac.
+#' @param yf_dist maximum distance, in feet, between young forest areas that
+#'   allows them to function as a single block. Defaults to 100 ft.
+#'
+#' @returns list of landscape elements, suitable for addition to a forest inventory.That
+#' @export
+#'
+#' @examples
+landscape_elements <- function(property, yf_size = 1, yf_dist = 100){
+  aoi <- aoi(property)
+
+  # Fetch data
+  ndsm <- get_ndsm(aoi)
+  lc <- get_landcover(aoi)
+  wet <- get_wetlands(aoi)
+  ttype <- get_treetype(aoi)
+
+ # TODO: Parallel fetching for remote data (requires package to be installed)
+  # old_plan <- future::plan(future::multisession)
+  # on.exit(future::plan(old_plan), add = TRUE)
+  # ndsm_f <- future::future(get_ndsm(aoi), packages = "vthabitat")
+  # clr_f <- future::future(get_clr(aoi), packages = "vthabitat")
+  # ndsm <- future::value(ndsm_f)
+  # clr <- future::value(clr_f)
+
+  # Process
+  canopy <- make_canopy(ndsm, lc)
+  shrub <- make_shrub(canopy, size = yf_size, distance = yf_dist)
+
+  ls <- land_summary(lc, canopy, wet, shrub, ttype)
+  ls_text <- describe_landscape(ls)
+
+  # in future, could return list with landscape text, maps, etc.
+  return(list(landscape_text = ls_text))
+}
+
 #' Landcover summary
 #'
 #' Summarizes percentage of land area in each cover type, combining landcover,
@@ -204,10 +245,12 @@ describe_landscape <- function(summary) {
 
   # Build the list phrase
   if (nrow(agg) == 0) {
-    sentence1 <- "The landscape area has no significant land cover."
+    sentence1 <- paste("Landscape analysis shows that the",
+                       "landscape area has no significant land cover.")
   } else if (nrow(agg) == 1) {
     sentence1 <- paste0(
-      "In the landscape area surrounding the property, some ",
+      "Landscape analysis shows that in the ",
+      "landscape area surrounding the property, some ",
       pct_to_words(agg$pct_round[1]), " percent of the land area is covered by ",
       agg$category[1], "."
     )
@@ -230,7 +273,8 @@ describe_landscape <- function(summary) {
       )
     }
     sentence1 <- paste0(
-      "In the landscape area surrounding the property, some ", list_phrase, "."
+      "Landscape analysis shows that in the ",
+      "landscape area surrounding the property, some ", list_phrase, "."
     )
   }
 
@@ -359,11 +403,18 @@ describe_landscape <- function(summary) {
     sentence3 <- ""
   }
 
+  sentence4 <-
+    paste0("Note that these statistics are based on numerous data sources",
+           " dating to 2022 or later. Conditions on the ground may have",
+           " changed since data were collected; for example, if the area",
+           " experienced significant development or logging.")
+
   # Combine sentences
   result <- paste(sentence1, sentence2)
   if (nchar(sentence3) > 0) {
     result <- paste(result, sentence3)
   }
+  result <- paste(result, sentence4)
 
   return(result)
 }
