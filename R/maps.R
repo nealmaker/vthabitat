@@ -63,6 +63,9 @@ map_context <- function(clr, landcover, prop = NA){
 #' map_canopy(canopy)
 #' }
 map_canopy <- function(canopy, prop = NA){
+  canopy[canopy == 0] <- NA
+  levels(canopy) <- data.frame(value = 1:4,
+                               cover = c("shrub", "pole", "partial", "closed"))
   if (all(is.na(prop))) {
     tmap::tm_shape(canopy) +
       tmap::tm_raster(title = "tree canopy",

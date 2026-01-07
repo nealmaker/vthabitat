@@ -82,7 +82,8 @@ make_canopy <- function(ndsm, landcover) {
 
   # Set category labels
   levels(out) <-
-    data.frame(value = 1:4, cover = c("shrub", "pole", "partial", "closed"))
+    data.frame(value = 0:4,
+               cover = c("groundcover", "shrub", "pole", "partial", "closed"))
 
   return(out)
 }
@@ -94,9 +95,9 @@ focal_fun <- function(x, ...){
   else if(base::mean(x > 9.144, na.rm = T) > .3) y <- 3 # partial overstory
   else if(base::mean(x > 3.048, na.rm = T) > .5) y <- 2 # pole stand
   else if(base::mean(x > 0.6096 & x <= 3.048, na.rm = T) > .25) y <- 1 # shrubby
-  else y <- NA # ground cover not shown
+  else y <- 0 # ground cover
 
-  ifelse(y > 0, y, NA)
+  ifelse(y >= 0, y, NA)
 }
 
 
