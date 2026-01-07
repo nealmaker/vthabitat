@@ -4,31 +4,55 @@
 \alias{land_summary}
 \title{Landcover summary}
 \usage{
-land_summary(landcover)
+land_summary(landcover, canopy, wetland, shrub, treetype)
 }
 \arguments{
 \item{landcover}{\code{SpatRaster} object with landcover classes from
 \code{get_landcover}. Must have category labels set.}
+
+\item{canopy}{\code{SpatRaster} object with canopy classes from
+\code{make_canopy}.}
+
+\item{wetland}{\code{SpatRaster} object with wetland classes from
+\code{get_wetlands}.}
+
+\item{shrub}{\code{sf} object with shrub polygons from \code{make_shrub},
+representing wildlife-valuable shrub areas.}
+
+\item{treetype}{\code{SpatRaster} object with tree type classes from
+\code{get_treetype}, showing Coniferous vs Deciduous canopy.}
 }
 \value{
-data frame with columns \code{cover} (land cover class name) and
-\code{pct} (percentage of non-NA area in each class)
+A list with two data frames:
+\describe{
+\item{cover}{Land cover classes with \code{cover} and \code{pct} columns,
+where pct is percentage of total AOI area (summing to 100)}
+\item{treetype}{Tree type classes with \code{type} and \code{pct} columns,
+where pct is percentage of tree canopy area (summing to 100)}
+}
 }
 \description{
-Summarizes percentage of land area in each cover type, based on a raster
-layer of Vermont's 2022 base landcover data for a given area.
+Summarizes percentage of land area in each cover type, combining landcover,
+canopy, wetland, and shrub data into a single comprehensive table.
 }
 \examples{
 \dontrun{
 # Set data path first
 set_data_path("~/vthabitat_data")
 
-# Get landcover for an area of interest
+# Get data for area of interest
 pt <- centroid(44.393, -72.487)
-my_aoi <- aoi(centroid = pt, size = 100)
+my_aoi <- aoi(centroid = pt, size = 500)
 lc <- get_landcover(my_aoi)
+ndsm <- get_ndsm(my_aoi)
+wetland <- get_wetlands(my_aoi)
+treetype <- get_treetype(my_aoi)
+canopy <- make_canopy(ndsm, lc)
+shrub <- make_shrub(canopy)
 
 # Summarize land cover percentages
-land_summary(lc)
+summary <- land_summary(lc, canopy, wetland, shrub, treetype)
+summary$cover    # cover types as \% of AOI
+summary$treetype # conifer/deciduous as \% of tree canopy
 }
 }

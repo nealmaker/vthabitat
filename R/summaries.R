@@ -1,16 +1,45 @@
 
 #' Summarized landscape elements
 #'
+#' Generates landscape analysis for a property, including a natural language
+#' description suitable for forest management plans.
+#'
 #' @param property sf polygon object with property of interest
 #' @param yf_size acreage of young forest blocks that qualifies them as young
 #'   forest habitat. Defaults to 1 ac.
 #' @param yf_dist maximum distance, in feet, between young forest areas that
 #'   allows them to function as a single block. Defaults to 100 ft.
 #'
-#' @returns list of landscape elements, suitable for addition to a forest inventory.That
+#' @returns list of landscape elements, suitable for addition to a forest
+#'   inventory. Currently includes:
+#'   \describe{
+#'     \item{landscape_text}{Character string with natural language description
+#'       of the landscape surrounding the property.}
+#'   }
 #' @export
 #'
 #' @examples
+#' \dontrun{
+#' # Set data path first
+#' set_data_path("~/vthabitat_data")
+#'
+#' # Create a property polygon (example: 50-acre parcel)
+#' property <- sf::st_sfc(
+#'   sf::st_polygon(list(rbind(
+#'     c(-72.5, 44.4), c(-72.49, 44.4),
+#'     c(-72.49, 44.41), c(-72.5, 44.41),
+#'     c(-72.5, 44.4)
+#'   ))),
+#'   crs = 4326
+#' )
+#' property <- sf::st_as_sf(data.frame(id = 1, geometry = property))
+#'
+#' # Generate landscape elements
+#' elements <- landscape_elements(property)
+#'
+#' # Access the landscape description
+#' cat(elements$landscape_text)
+#' }
 landscape_elements <- function(property, yf_size = 1, yf_dist = 100){
   aoi <- aoi(property)
 
