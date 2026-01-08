@@ -4,9 +4,11 @@
 \alias{land_summary}
 \title{Landcover summary}
 \usage{
-land_summary(landcover, canopy, wetland, shrub, treetype)
+land_summary(aoi, landcover, canopy, wetland, shrub, treetype, yf_size = 1)
 }
 \arguments{
+\item{aoi}{\code{sf} polygon object representing the area of interest.}
+
 \item{landcover}{\code{SpatRaster} object with landcover classes from
 \code{get_landcover}. Must have category labels set.}
 
@@ -21,10 +23,15 @@ representing wildlife-valuable shrub areas.}
 
 \item{treetype}{\code{SpatRaster} object with tree type classes from
 \code{get_treetype}, showing Coniferous vs Deciduous canopy.}
+
+\item{yf_size}{Minimum acreage used to define young forest habitat in
+\code{make_shrub}. Defaults to 1.}
 }
 \value{
-A list with two data frames:
+A list with:
 \describe{
+\item{acres}{Numeric, total acreage of the AOI rounded to nearest 100}
+\item{yf_size}{Numeric, minimum acreage for young forest habitat}
 \item{cover}{Land cover classes with \code{cover} and \code{pct} columns,
 where pct is percentage of total AOI area (summing to 100)}
 \item{treetype}{Tree type classes with \code{type} and \code{pct} columns,
@@ -51,7 +58,8 @@ canopy <- make_canopy(ndsm, lc)
 shrub <- make_shrub(canopy)
 
 # Summarize land cover percentages
-summary <- land_summary(lc, canopy, wetland, shrub, treetype)
+summary <- land_summary(my_aoi, lc, canopy, wetland, shrub, treetype)
+summary$acres    # total AOI acreage
 summary$cover    # cover types as \% of AOI
 summary$treetype # conifer/deciduous as \% of tree canopy
 }

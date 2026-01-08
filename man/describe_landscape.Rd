@@ -20,7 +20,7 @@ for inclusion in forest management plans.
 }
 \examples{
 \dontrun{
-summary <- land_summary(lc, canopy, wetland, shrub, treetype)
+summary <- land_summary(my_aoi, lc, canopy, wetland, shrub, treetype)
 describe_landscape(summary)
 }
 }

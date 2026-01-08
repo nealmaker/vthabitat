@@ -61,7 +61,7 @@ landscape_elements <- function(property, yf_size = 1, yf_dist = 100){
   canopy <- make_canopy(ndsm, lc)
   shrub <- make_shrub(canopy, size = yf_size, distance = yf_dist)
 
-  ls <- land_summary(lc, canopy, wet, shrub, ttype)
+  ls <- land_summary(aoi, lc, canopy, wet, shrub, ttype, yf_size)
   ls_text <- describe_landscape(ls)
 
   # in future, could return list with landscape text, maps, etc.
@@ -73,6 +73,7 @@ landscape_elements <- function(property, yf_size = 1, yf_dist = 100){
 #' Summarizes percentage of land area in each cover type, combining landcover,
 #' canopy, wetland, and shrub data into a single comprehensive table.
 #'
+#' @param aoi \code{sf} polygon object representing the area of interest.
 #' @param landcover \code{SpatRaster} object with landcover classes from
 #'   \code{get_landcover}. Must have category labels set.
 #' @param canopy \code{SpatRaster} object with canopy classes from
@@ -83,9 +84,13 @@ landscape_elements <- function(property, yf_size = 1, yf_dist = 100){
 #'   representing wildlife-valuable shrub areas.
 #' @param treetype \code{SpatRaster} object with tree type classes from
 #'   \code{get_treetype}, showing Coniferous vs Deciduous canopy.
+#' @param yf_size Minimum acreage used to define young forest habitat in
+#'   \code{make_shrub}. Defaults to 1.
 #'
-#' @return A list with two data frames:
+#' @return A list with:
 #'   \describe{
+#'     \item{acres}{Numeric, total acreage of the AOI rounded to nearest 100}
+#'     \item{yf_size}{Numeric, minimum acreage for young forest habitat}
 #'     \item{cover}{Land cover classes with \code{cover} and \code{pct} columns,
 #'       where pct is percentage of total AOI area (summing to 100)}
 #'     \item{treetype}{Tree type classes with \code{type} and \code{pct} columns,
@@ -109,11 +114,15 @@ landscape_elements <- function(property, yf_size = 1, yf_dist = 100){
 #' shrub <- make_shrub(canopy)
 #'
 #' # Summarize land cover percentages
-#' summary <- land_summary(lc, canopy, wetland, shrub, treetype)
+#' summary <- land_summary(my_aoi, lc, canopy, wetland, shrub, treetype)
+#' summary$acres    # total AOI acreage
 #' summary$cover    # cover types as % of AOI
 #' summary$treetype # conifer/deciduous as % of tree canopy
 #' }
-land_summary <- function(landcover, canopy, wetland, shrub, treetype) {
+land_summary <- function(aoi, landcover, canopy, wetland, shrub, treetype, yf_size = 1) {
+  # Calculate AOI acreage (rounded to nearest 100)
+  aoi_area_m2 <- units::drop_units(sf::st_area(aoi))
+  aoi_acres <- round(aoi_area_m2 * 0.0002471054, -2)  # sq m to acres, round to 100
   # --- 1. Get developed, water, bare soil from landcover ---
   lc_freq <- terra::freq(landcover)
   lc_freq <- lc_freq[!is.na(lc_freq$value), ]
@@ -219,6 +228,8 @@ land_summary <- function(landcover, canopy, wetland, shrub, treetype) {
   cover_tab <- cover_tab[cover_tab$pct > 0, ]
 
   return(list(
+    acres = aoi_acres,
+    yf_size = yf_size,
     cover = cover_tab,
     treetype = treetype_tab
   ))
@@ -239,10 +250,12 @@ land_summary <- function(landcover, canopy, wetland, shrub, treetype) {
 #'
 #' @examples
 #' \dontrun{
-#' summary <- land_summary(lc, canopy, wetland, shrub, treetype)
+#' summary <- land_summary(my_aoi, lc, canopy, wetland, shrub, treetype)
 #' describe_landscape(summary)
 #' }
 describe_landscape <- function(summary) {
+  acres <- summary$acres
+  yf_size <- summary$yf_size
   cover <- summary$cover
   treetype <- summary$treetype
 
@@ -273,13 +286,14 @@ describe_landscape <- function(summary) {
   agg <- agg[order(-agg$pct), ]
 
   # Build the list phrase
+  acres_text <- format(acres, big.mark = ",", scientific = FALSE)
   if (nrow(agg) == 0) {
-    sentence1 <- paste("Landscape analysis shows that the",
-                       "landscape area has no significant land cover.")
+    sentence1 <- paste0("Landscape analysis shows that the ",
+                        acres_text, " acre landscape area has no significant land cover.")
   } else if (nrow(agg) == 1) {
     sentence1 <- paste0(
       "Landscape analysis shows that in the ",
-      "landscape area surrounding the property, some ",
+      acres_text, " acre landscape area surrounding the property, some ",
       pct_to_words(agg$pct_round[1]), " percent of the land area is covered by ",
       agg$category[1], "."
     )
@@ -303,7 +317,7 @@ describe_landscape <- function(summary) {
     }
     sentence1 <- paste0(
       "Landscape analysis shows that in the ",
-      "landscape area surrounding the property, some ", list_phrase, "."
+      acres_text, " acre landscape area surrounding the property, some ", list_phrase, "."
     )
   }
 
@@ -418,7 +432,20 @@ describe_landscape <- function(summary) {
   # (all upland canopy + all wetlands, excluding developed, water, bare soil)
   nat_veg_pct <- sum(cover$pct[!cover$cover %in% c("Developed", "Water", "Bare Soil")])
 
-  if (nat_veg_pct > 0 && valuable_shrub_pct >= 0.5) {
+  # Format yf_size for text (e.g., "one acre" or "2 acres")
+  if (yf_size == 1) {
+    yf_size_text <- "at least one acre"
+  } else {
+    yf_size_text <- paste0("at least ", yf_size, " acres")
+  }
+
+  if (all_forest_pct > 0 && valuable_shrub_pct < 0.5) {
+    # There is forest but no significant young forest
+    sentence3 <- paste0(
+      "There is no young upland forest habitat in the landscape area ",
+      "(forest less than 20 feet tall and in patches that cover ", yf_size_text, ")."
+    )
+  } else if (nat_veg_pct > 0 && valuable_shrub_pct >= 0.5) {
     young_forest_rel <- round(100 * valuable_shrub_pct / nat_veg_pct)
     # Add "only" if young forest is less than 4.5% of all forestland
     only_qualifier <- if (all_forest_pct > 0 && young_of_forest < 4.5) "only " else ""
@@ -426,7 +453,7 @@ describe_landscape <- function(summary) {
       "Of the naturally vegetated land, ",
       only_qualifier,
       pct_to_words(young_forest_rel),
-      " percent is young upland forest (less than 20 feet tall and in patches that cover at least one acre)."
+      " percent is young upland forest (less than 20 feet tall and in patches that cover ", yf_size_text, ")."
     )
   } else {
     sentence3 <- ""

@@ -23,11 +23,13 @@ test_that("land_summary returns list with correct structure", {
   canopy <- make_canopy(ndsm, lc)
   shrub <- make_shrub(canopy, size = 0.1, distance = 50)
 
-  result <- land_summary(lc, canopy, wet, shrub, ttype)
+  result <- land_summary(test_aoi, lc, canopy, wet, shrub, ttype)
 
   expect_type(result, "list")
+  expect_true("acres" %in% names(result))
   expect_true("cover" %in% names(result))
   expect_true("treetype" %in% names(result))
+  expect_type(result$acres, "double")
   expect_s3_class(result$cover, "data.frame")
   expect_s3_class(result$treetype, "data.frame")
   expect_true("cover" %in% names(result$cover))
@@ -49,7 +51,7 @@ test_that("land_summary cover percentages sum to 100", {
   canopy <- make_canopy(ndsm, lc)
   shrub <- make_shrub(canopy, size = 0.1, distance = 50)
 
-  result <- land_summary(lc, canopy, wet, shrub, ttype)
+  result <- land_summary(test_aoi, lc, canopy, wet, shrub, ttype)
 
   expect_equal(sum(result$cover$pct), 100, tolerance = 0.5)
 })
@@ -69,7 +71,7 @@ test_that("land_summary includes expected classes", {
   canopy <- make_canopy(ndsm, lc)
   shrub <- make_shrub(canopy, size = 0.1, distance = 50)
 
-  result <- land_summary(lc, canopy, wet, shrub, ttype)
+  result <- land_summary(test_aoi, lc, canopy, wet, shrub, ttype)
 
   # Should have some of the expected land cover classes
   expected_classes <- c("Developed", "Water", "Upland Closed", "Upland Partial",
@@ -226,7 +228,7 @@ test_that("describe_landscape returns character string", {
   canopy <- make_canopy(ndsm, lc)
   shrub <- make_shrub(canopy, size = 0.1, distance = 50)
 
-  summary <- land_summary(lc, canopy, wet, shrub, ttype)
+  summary <- land_summary(test_aoi, lc, canopy, wet, shrub, ttype)
   result <- describe_landscape(summary)
 
   expect_type(result, "character")
@@ -249,7 +251,7 @@ test_that("describe_landscape mentions forest composition", {
   canopy <- make_canopy(ndsm, lc)
   shrub <- make_shrub(canopy, size = 0.1, distance = 50)
 
-  summary <- land_summary(lc, canopy, wet, shrub, ttype)
+  summary <- land_summary(test_aoi, lc, canopy, wet, shrub, ttype)
   result <- describe_landscape(summary)
 
   # Should mention hardwoods or softwoods
